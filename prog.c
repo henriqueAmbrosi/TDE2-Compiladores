@@ -52,6 +52,16 @@
 
 int linlex = 0, collex = 1;
 
+typedef struct bloco
+{
+   char nome[20];
+   int succs[10];
+   int proxSucc;
+} bb;
+
+bb grafo[50];
+int blocoAtual = 0;
+int proxBloco = 1;
 
 char tokens[][20] = {"", "TK_int",
                      "TK_float",
@@ -363,6 +373,43 @@ void mostra_t()
    printf("%s lex=%s na lin %d, col %d\n", tokens[token], lex, linlex, collex);
 }
 
+int geraBloco(char nomeBloco[20])
+{
+   for(int i = 0; i < proxBloco; i++){
+      if(strcmp(grafo[i].nome, nomeBloco) == 0){
+         return i;
+      }
+   }
+
+
+   grafo[proxBloco].proxSucc = 0;
+   strcpy(grafo[proxBloco].nome, nomeBloco);
+   proxBloco++;
+   return proxBloco - 1;
+       
+}
+
+void addSucc(char nomeBloco[]){
+   for(int i = 0; i < proxBloco; i++){
+      if(strcmp(grafo[i].nome, nomeBloco) == 0){
+         // Verifica se successor ja existe
+         for(int j = 0; j < grafo[blocoAtual].proxSucc; j++){
+            if(grafo[blocoAtual].succs[j] == i){
+               return;
+            }
+         }
+         // Adiciona successor
+         grafo[blocoAtual].succs[grafo[blocoAtual].proxSucc++] = i;
+         return;
+      }
+   }
+   int novoBloco;
+   novoBloco = geraBloco(nomeBloco);
+   grafo[blocoAtual].succs[grafo[blocoAtual].proxSucc++] = novoBloco;
+
+   return;
+}
+
 
 /****************/
 /*              */
@@ -446,10 +493,6 @@ int RelationalExpressionRest(char R_hp[MAX_COD], char R_sp[MAX_COD], char R_hc[M
    }
    return 1;
 }
-
-// E -> E1 + T {E.cod=....}
-// E -> T { Rhp=Tp   Rhc=Tc}  R   {E.p=RSp   E.c=Rsc}
-
 
 int AdditiveExpression(char E_p[MAX_COD], char E_c[MAX_COD])
 {
@@ -558,9 +601,22 @@ int PrimaryExpression(char F_p[MAX_COD], char F_c[MAX_COD])
    return 0;
 }
 
+int JumpExpression(char Com_c[MAX_COD]){
+   if(token == TK_goto){
+      token = le_token();
+      if(token == TK_id){
+         addSucc(lex);
+         token = le_token();
+         return 1;
+      }
+   }
+   return 0;
+}
+
 
 int IfExpression(char If_c[MAX_COD])
 {
+   char blocoAbaixo[20];
    if (token == TK_if)
    {
       token = le_token();
@@ -569,8 +625,12 @@ int IfExpression(char If_c[MAX_COD])
          if (Expression(E_p, E_cod))
          {
                char E2_cod[MAX_COD];
-               if (Command(E2_cod))
+               if (JumpExpression(E2_cod))
                {
+                  sprintf(blocoAbaixo, "Seq if %d", proxBloco + 1);
+                  int i = geraBloco(blocoAbaixo);
+                  addSucc(blocoAbaixo);
+                  blocoAtual = i;
                   return 1;
                }
             
@@ -585,16 +645,6 @@ int IfExpression(char If_c[MAX_COD])
 int Expression(char e_p[MAX_COD], char e_c[MAX_COD]){
    char e1_c[MAX_COD];
    if(AssignmentExpression(e_p, e_c)){
-      if(token == TK_virgula){
-         token = le_token();
-         if(Expression(e_p, e1_c)){
-            sprintf(e_c, "%s\n%s", e_c, e1_c);
-            return 1;
-         }
-
-         return 0;
-      }
-
       return 1;
    }
 
@@ -620,20 +670,14 @@ int CommandList(char Com_c[MAX_COD]){
 
 }
 
-int JumpExpression(char Com_c[MAX_COD]){
-   if(token == TK_goto){
-      token = le_token();
-      if(token == TK_id){
-         sprintf(Com_c, "\tgoto %s\n", lex);
-         token = le_token();
-         return 1;
-      }
-   }
-   return 0;
-}
-
 int JumpLabel(char Com_c[MAX_COD]){
+   char nomeBloco[20];
+   strcpy(nomeBloco, lex);
+   nomeBloco[strlen(lex) - 1] = '\0';
+
    if(token == TK_label){
+      if(blocoAtual != 0) addSucc(nomeBloco);
+      blocoAtual = geraBloco(nomeBloco);
       token = le_token();
       return 1;
    }
@@ -668,7 +712,18 @@ int main()
       printf("Erro na abertura do arquivo de saida");
       exit(0);
    }
+
    token = le_token();
+   char nomeBloco[20];
+   if(token == TK_label){
+      strcpy(nomeBloco, lex);
+      nomeBloco[strlen(lex) - 1] = '\0';
+      strcpy(grafo[0].nome, nomeBloco);
+   }
+   else {
+      strcpy(grafo[0].nome, "Inicio");
+   }
+
    char Com_c[MAX_COD];
    if (CommandList(Com_c) == 0)
       printf("Erro no comando!!!\n");
