@@ -605,6 +605,7 @@ int JumpExpression(char Com_c[MAX_COD]){
    if(token == TK_goto){
       token = le_token();
       if(token == TK_id){
+         // Adiciona o bloco sucessor por conta do desvio incondicional
          addSucc(lex);
          token = le_token();
          return 1;
@@ -627,8 +628,10 @@ int IfExpression(char If_c[MAX_COD])
                char E2_cod[MAX_COD];
                if (JumpExpression(E2_cod))
                {
+                  // Regra 3: Gera novo bloco devido ao desvio condicional 
                   sprintf(blocoAbaixo, "Seq if %d", proxBloco + 1);
                   int i = geraBloco(blocoAbaixo);
+                  // Adiciona o bloco sucessor por conta da execução sequencial (caso não atenda o if)
                   addSucc(blocoAbaixo);
                   blocoAtual = i;
                   return 1;
@@ -675,7 +678,11 @@ int JumpLabel(char Com_c[MAX_COD]){
    strcpy(nomeBloco, lex);
    nomeBloco[strlen(lex) - 1] = '\0';
 
+   // Regra 2: Novos blocos são gerados quando tem algum jump que aponta pra linha 
+   // Nesse caso, ele gera quando encontra a label, mesmo que não tenha nenhum goto apontando pra ele
+
    if(token == TK_label){
+      // Adiciona o bloco sucessor por conta do Jump Label indicar o início de um novo bloco na execução sequencial
       if(blocoAtual != 0) addSucc(nomeBloco);
       blocoAtual = geraBloco(nomeBloco);
       token = le_token();
@@ -714,6 +721,7 @@ int main()
    }
 
    token = le_token();
+   // Regra 1: Primeiro bloco começa na primeira instrução
    char nomeBloco[20];
    if(token == TK_label){
       strcpy(nomeBloco, lex);
