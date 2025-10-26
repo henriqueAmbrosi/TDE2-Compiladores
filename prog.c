@@ -604,15 +604,15 @@ int Expression(char e_p[MAX_COD], char e_c[MAX_COD]){
 
 int CommandList(char Com_c[MAX_COD]){
    char Command_c[MAX_COD], CommandList_c[MAX_COD];
+
+   if(token == TK_Fim_Arquivo){
+      return 1;
+   }
+
    if(Command(Command_c)){
-      sprintf(Com_c, "%s", Command_c);
-      marca_pos();
       if(CommandList(CommandList_c)){
-         sprintf(Com_c, "%s%s", Com_c, CommandList_c);
          return 1;
       }
-      restaura();
-      return 1;
    }
    
    return 0;
