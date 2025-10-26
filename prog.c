@@ -1,209 +1,682 @@
-#define TKId 1
-#define TKVoid 2
-#define TKInt 3
-#define TKFloat 4
-#define TKVirgula 5
-#define TKDoisPontos 6
-#define TKAbrePar 7
-#define TKFechaPar 8
-#define TKAtrib 9
-#define TKPontoEVirgula 10
-#define TKAbreChaves 11
-#define TKFechaChaves 12
-#define TKMais 13
-#define TKDuploMais 14
-#define TKProd 15
-#define TKChar 16
-#define TKSub 17
-#define TKAbreColchete 18
-#define TKFechaColchete 19
-#define TKAtribMais 20
-#define TKDouble 21
-#define TKCteInt 22
-#define TKElse 23
-#define TKIf 24
-#define TKString 25
-#define TKFimArquivo 26
-
-#define false 0
-#define true 1
-
-#include <string.h>
 #include <stdio.h>
-#include <conio.h>
+#include <string.h>
 #include <stdlib.h>
 
-char nome[10][20]={"","TKId","TKvoid","TKInt"};
+#define TK_int 1
+#define TK_float 2
+#define TK_char 3
+#define TK_struct 4
+#define TK_if 5
+#define TK_else 6
 
-int pos = 0;
 
-int tk;
-char lex[20];
-int lin=1;
+#define TK_id 7
+#define TK_Abre_Colch 8
+#define TK_Fecha_Colch 9
+#define TK_Abre_Chaves 10
+#define TK_Fecha_Chaves 11
+#define TK_Fim_Arquivo 12
+#define TK_Atrib 13
+#define TK_Const_Int 14
+#define TK_Mais 15
+#define TK_Menos 16
+#define TK_Mult 17
+#define TK_Abre_Par 18
+#define TK_Fecha_Par 19
+#define TK_virgula 20
+#define TK_pv 21
+#define TK_Maior 22
+#define TK_Menor 23
+#define TK_Menor_Igual 24
+#define TK_Maior_Igual 25
+#define TK_Igual 26
+#define TK_Diferente 27
+#define TK_while 28
+#define TK_and_bitwise 29
+#define TK_and_logico 30
+#define TK_or_logico 31
+#define TK_do 32
+#define TK_for 33
+#define TK_break 34
+#define TK_continue 35
+#define TK_label 36
+#define TK_goto 37
+#define TK_Div 38
+
+/***********************************************************************************/
+/*                                                                                 */
+/*  IN�CIO DO L�XICO - N�o entre a n�o ser que tenha interesse pessoal em l�xicos  */
+/*                                                                                 */
+/***********************************************************************************/
+
+
+int linlex = 0, collex = 1;
+
+
+char tokens[][20] = {"", "TK_int",
+                     "TK_float",
+                     "TK_char",
+                     "TK_struct",
+                     "TK_if",
+                     "TK_else",
+                     "TK_id",
+                     "TK_Abre_Colch",
+                     "TK_Fecha_Colch",
+                     "TK_Abre_Chaves",
+                     "TK_Fecha_Chaves",
+                     "TK_Fim_Arquivo",
+                     "TK_Atrib",
+                     "TK_Const_Int",
+                     "TK_Mais",
+                     "TK_Menos",
+                     "TK_Mult",
+                     "TK_Abre_Par",
+                     "TK_Fecha_Par",
+                     "TK_virgula",
+                     "TK_pv",
+                     "TK_Maior",
+                     "TK_Menor",
+                     "TK_Menor_Igual",
+                     "TK_Maior_Igual",
+                     "TK_Igual",
+                     "TK_Diferente",
+                     "TK_while",
+                     "TK_and_bitwise",
+                     "TK_and_logico",
+                     "TK_or_logico",
+                     "TK_do",
+                     "TK_for",
+                     "TK_break",
+                     "TK_continue",
+                     "TK_label",
+                     "TK_goto",
+                     "TK_Div"
+                  };
+
+
+typedef struct pal
+{
+   char palavra[20];
+   int token;
+} tpal;
+tpal reservadas[] = {{"", 0},
+                     {"int", TK_int},
+                     {"float", TK_float},
+                     {"char", TK_char},
+                     {"struct", TK_struct},
+                     {"if", TK_if},
+                     {"else", TK_else},
+                     {"while", TK_while},
+                     {"do", TK_do},
+                     {"for", TK_for},
+                     {"break", TK_break},
+                     {"continue", TK_continue},
+                     {"goto", TK_goto},
+                     {"fim", -1}};
+
+
 FILE *arqin;
-char c; // �ltimo caracter lido do arquivo
+int token;
+char lex[20];
+char c;
+// vari�veis do marca - restaura
 
-struct pal_res{char palavra[20]; int tk;};
-struct pal_res lista_pal[]={{"void",TKVoid},
-                  {"int",TKInt},
-                  {"float",TKFloat},
-                  {"char",TKChar},
-                  {"double",TKDouble},
-                  {"else",TKElse},
-                  {"if",TKIf},
-                  {"fimtabela",TKId}};
 
-int palavra_reservada(char lex[])
+int tokenant;
+long posarq;
+char lexant[100];
+char cant;
+int marcou = 0;
+
+
+void marca_pos()
 {
-int postab=0;
-while (strcmp("fimtabela",lista_pal[postab].palavra)!=0)
+   marcou = 1;
+   tokenant = token;
+   posarq = ftell(arqin);
+   strcpy(lexant, lex);
+   cant = c;
+}
+
+
+void restaura()
+{
+   fseek(arqin, posarq, SEEK_SET);
+   token = tokenant;
+   strcpy(lex, lexant);
+   c = cant;
+}
+
+
+char le_char()
+{
+   if (fread(&c, 1, 1, arqin) == 0)
+      return -1;
+   if (c == '\n')
    {
-   if (strcmp(lex,lista_pal[postab].palavra)==0)
-      return lista_pal[postab].tk;
-   postab++;
+      linlex++;
+      collex = 1;
    }
-return TKId;
-}
+   else
+      collex++;
+   return c;
+};
 
 
-void getToken(); // prot�tipos
-void proxC();
-
-// vari�veis globais para retrocesso
-
-typedef struct contexto{long posglobal;
-               int tkant;
-               char cant;
-               char lexant[20];} tcontexto;
-
-tcontexto pilhacon[1000];
-int topcontexto=0;
-
-void marcaPosToken() {
-	pilhacon[topcontexto].posglobal=ftell(arqin);
-	pilhacon[topcontexto].tkant=tk;
-	pilhacon[topcontexto].cant=c;
-    strcpy(pilhacon[topcontexto].lexant,lex);
-    topcontexto++;
-}
-
-//Implemente aqui a sua funcao restauraPosToken()
-
-void restauraPosToken() {
-    topcontexto--;
-	fseek(arqin,pilhacon[topcontexto].posglobal,SEEK_SET);
-    c=pilhacon[topcontexto].cant;
-	tk=pilhacon[topcontexto].tkant;
-    strcpy(lex,pilhacon[topcontexto].lexant);
-}
-
-void proxC()
+int pal_res(char lex[])
 {
-if (feof(arqin)) {
-   c=-1;
-//   printf("Chegou no fim de arquivo\n");
-   return;
-   }
-fread(&c,1,1,arqin);
-if (c=='\n') lin++;
-//printf("Leu caracter %c\n",c);
-}
-
-void getToken()
-{
-int estado=0,
-    fim=0,
-    posl=0;
-while (!fim)
+   int tk = 0;
+   while (strcmp(reservadas[tk].palavra, "fim") != 0)
    {
-/*printf("%s\n",exp1);
-printf("char=%c pos=%d\n",c,pos);*/
-   lex[posl++]=c;
-   switch(estado){
-      case 0:if (c>='a' && c<='z' || c>='A' && c<='Z' || c=='_')
-                {proxC();estado=1;break;}
-             if (c>='0' && c<='9')
-                {
-                while (c>='0' && c<='9') proxC();
-                lex[posl]='\0';
-                tk=TKCteInt;
-                return;
-                }
-             if (c=='"')
-                {
-                proxC();
-                while (c!='"')
-				   {
-				   lex[posl++]=c;
-				   proxC();
-				   }
-                proxC();
-                lex[posl]='\0';
-                tk=TKString;
-                return;
-                }
-             if (c=='='){lex[posl]='\0';proxC();tk=TKAtrib;/*printf("Reconheceu token TKAtrib\n");*/return;}
-             if (c=='+')
-			    {
-			    proxC();
-				if (c=='+')
-			       {
-				   lex[posl++]='+';
-     			   lex[posl]='\0';
-				   proxC();
-				   tk=TKDuploMais;/*printf("Reconheceu token TKDuploMais\n");*/return;
-				   }
-				else if (c=='=')
-			       {
-				   lex[posl++]='=';
-     			   lex[posl]='\0';
-				   proxC();
-				   tk=TKAtribMais;/*printf("Reconheceu token TKDuploMais\n");*/return;
-				   }
-				else
-				   {
-	               lex[posl]='\0';
-				   tk=TKMais;/*printf("Reconheceu token TKSoma\n");*/return;
-				   }
-			    }
-             if (c=='*'){lex[posl]='\0';proxC();tk=TKProd;/*printf("Reconheceu token TKProd\n");*/return;}
-             if (c=='['){lex[posl]='\0';proxC();tk=TKAbreColchete;/*printf("Reconheceu token TKAbrePar\n");*/return;}
-             if (c==']'){lex[posl]='\0';proxC();tk=TKFechaColchete;/*printf("Reconheceu token TKAbrePar\n");*/return;}
-             if (c=='('){lex[posl]='\0';proxC();tk=TKAbrePar;/*printf("Reconheceu token TKAbrePar\n");*/return;}
-             if (c==')'){lex[posl]='\0';proxC();tk=TKFechaPar;/*printf("Reconheceu token FechaPar\n");*/return;}
-             if (c=='{'){lex[posl]='\0';proxC();tk=TKAbreChaves;/*printf("Reconheceu token TKAbreChaves\n");*/return;}
-             if (c=='}'){lex[posl]='\0';proxC();tk=TKFechaChaves;/*printf("Reconheceu token TKFechaChaves\n");*/return;}
-             if (c==','){lex[posl]='\0';proxC();tk=TKVirgula;/*printf("Reconheceu token TKVirgula\n");*/return;}
-             if (c==';'){lex[posl]='\0';proxC();tk=TKPontoEVirgula;/*printf("Reconheceu token TKPontoEVirgula\n");*/return;}
-             if (c==':'){lex[posl]='\0';proxC();tk=TKDoisPontos;/*printf("Reconheceu token TKDoisPontos\n");*/return;}
-             if (c=='-'){lex[posl]='\0';proxC();tk=TKSub;/*printf("Reconheceu token TKSub\n");*/return;}
-             if (c==-1){lex[posl]='\0';proxC();tk=TKFimArquivo;/*printf("Reconheceu token TKFimArquivo\n");*/return;}
-             if (c==' ' || c=='\n' || c=='\t' || c=='\r') {proxC();posl--;break;}
-             if (c=='\0') {tk=-1;return;}
-             printf("Erro l�xico: encontrou o caracter %c (%d) na linha %d\n",c,c,lin);
-             while (c!='\n') proxC();
-             break;
-      case 1:if (c>='a' && c<='z' || c>='A' && c<='Z' || c=='_' || c>='0' && c<='9') {proxC();break;}
-             lex[--posl]='\0';
-             tk=palavra_reservada(lex);
-             //printf("reconheceu token %s\n",lex);
-             return;
-      } //switch
-   }// while
-}// fun��o
+      if (strcmp(lex, reservadas[tk].palavra) == 0)
+         return reservadas[tk].token;
+      tk++;
+   }
+
+   if(lex[strlen(lex) - 1] == ':'){
+      return TK_label;
+   }
+   return TK_id;
+}
+
+
+int le_token()
+{
+   static int pos = 0;
+   static int estado = 0;
+   while (1)
+   {
+      switch (estado)
+      {
+      case 0:
+         if (c == ',')
+         {
+            c = le_char();
+            return TK_virgula;
+         }
+         if (c == '+')
+         {
+            c = le_char();
+            return TK_Mais;
+         }
+         if (c == '-')
+         {
+            c = le_char();
+            return TK_Menos;
+         }
+         if (c == '*')
+         {
+            c = le_char();
+            return TK_Mult;
+         }
+         if (c == '{')
+         {
+            c = le_char();
+            return TK_Abre_Chaves;
+         }
+         if (c == '}')
+         {
+            c = le_char();
+            return TK_Fecha_Chaves;
+         }
+         if (c == ';')
+         {
+            c = le_char();
+            strcpy(lex, ";");
+            return TK_pv;
+         }
+         if (c == '[')
+         {
+            c = le_char();
+            return TK_Abre_Colch;
+         }
+         if (c == ']')
+         {
+            c = le_char();
+            return TK_Fecha_Colch;
+         }
+         if (c == '(')
+         {
+            c = le_char();
+            return TK_Abre_Par;
+         }
+         if (c == ')')
+         {
+            c = le_char();
+            return TK_Fecha_Par;
+         }
+         if (c == '=')
+         {
+            c = le_char();
+            if (c == '=')
+            {
+               c = le_char();
+               return TK_Igual;
+            }
+            strcpy(lex, "=");
+            return TK_Atrib;
+         }
+         if (c == '<')
+         {
+            c = le_char();
+            if (c == '=')
+            {
+               c = le_char();
+               return TK_Menor_Igual;
+            }
+            return TK_Menor;
+         }
+         if (c == '&')
+         {
+            c = le_char();
+            if (c == '&')
+            {
+               c = le_char();
+               return TK_and_logico;
+            }
+            return TK_and_bitwise;
+         }
+         if (c == '>')
+         {
+            c = le_char();
+            if (c == '=')
+            {
+               c = le_char();
+               return TK_Maior_Igual;
+            }
+            return TK_Maior;
+         }
+         if (c == '!')
+         {
+            c = le_char();
+            if (c == '=')
+            {
+               c = le_char();
+               return TK_Diferente;
+            }
+         }
+         if (c >= 'a' && c <= 'z' || c >= 'A' && c <= 'Z' || c == '_')
+         {
+            lex[0] = c;
+            c = le_char();
+            pos = 1;
+            estado = 1;
+            break;
+         }
+         if (c >= '0' && c <= '9')
+         {
+            lex[0] = c;
+            c = le_char();
+            pos = 1;
+            estado = 2;
+            break;
+         }
+         if (c == -1)
+            return TK_Fim_Arquivo;
+         if (c == '\n' || c == '\r' || c == '\t' || c == '\0' || c == ' ')
+         {
+            c = le_char();
+            break;
+         }
+      case 1:
+         if (c >= 'a' && c <= 'z' || c >= 'A' && c <= 'Z' || c == '_' || c >= '0' && c <= '9' || c == ':')
+         {
+            lex[pos++] = c;
+            c = le_char();
+            break;
+         }
+         else
+         {
+            estado = 0;
+            lex[pos] = '\0';
+            return pal_res(lex);
+         }
+      case 2:
+         if (c >= '0' && c <= '9')
+         {
+            lex[pos++] = c;
+            c = le_char();
+            break;
+         }
+         else
+         {
+            estado = 0;
+            lex[pos] = '\0';
+            return TK_Const_Int;
+         }
+      }
+   }
+}
+
+
+/********************/
+/*                  */
+/*  FIM DO L�XICO   */
+/*                  */
+/********************/
+
+
+#define MAX_COD 1000
+
+void mostra_t()
+{
+   printf("%s lex=%s na lin %d, col %d\n", tokens[token], lex, linlex, collex);
+}
+
+
+/****************/
+/*              */
+/*  EXPRESS�ES  */
+/*              */
+/****************/
+
+
+int MultiplicativeExpression(char T_p[MAX_COD], char T_c[MAX_COD]);
+int MultiplicativeExpressionRest(char S_hp[MAX_COD], char S_sp[MAX_COD], char S_hc[MAX_COD], char S_sc[MAX_COD]);
+int AdditiveExpression(char E_p[MAX_COD], char E_c[MAX_COD]);
+int AdditiveExpressionRest(char R_hp[MAX_COD], char R_sp[MAX_COD], char R_hc[MAX_COD], char R_sc[MAX_COD]);
+int PrimaryExpression(char F_p[MAX_COD], char F_c[MAX_COD]);
+int RelationalExpression(char E_p[MAX_COD], char E_c[MAX_COD]);
+int RelationalExpressionRest(char R_hp[MAX_COD], char R_sp[MAX_COD], char R_hc[MAX_COD], char R_sc[MAX_COD]);
+int AssignmentExpression(char A_p[MAX_COD], char A_c[MAX_COD]);
+int Command(char Com_c[MAX_COD]);
+int CommandList(char Com_c[MAX_COD]);
+int Expression(char e_p[MAX_COD], char e_c[MAX_COD]);
+
+int AssignmentExpression(char A_p[MAX_COD], char A_c[MAX_COD]){
+   char A1_c[MAX_COD], A1_p[MAX_COD]; 
+   marca_pos();
+   if(token == TK_id){
+      token = le_token();
+      if(token == TK_Atrib){
+         token = le_token();
+         if(AssignmentExpression(A1_p, A1_c)){
+            return 1;
+         }
+      }
+   }
+   restaura();
+   if(RelationalExpression(A_p, A_c)){
+      return 1;
+   }
+
+   return 0;
+}
+
+int RelationalExpression(char E_p[MAX_COD], char E_c[MAX_COD])
+{
+   char T_p[MAX_COD], T_c[MAX_COD], R_hp[MAX_COD], R_sp[MAX_COD], R_hc[MAX_COD], R_sc[MAX_COD];
+
+   if (AdditiveExpression(T_p, T_c))
+   {
+      if (RelationalExpressionRest(R_hp, R_sp, R_hc, R_sc))
+      {
+         return 1;
+      }
+   }
+   return 0;
+}
+
+int RelationalExpressionRest(char R_hp[MAX_COD], char R_sp[MAX_COD], char R_hc[MAX_COD], char R_sc[MAX_COD])
+{
+   char T_c[MAX_COD], R1_hc[MAX_COD], R1_sc[MAX_COD], T_p[MAX_COD], R1_hp[MAX_COD], R1_sp[MAX_COD];
+   if (token == TK_Maior)
+   {
+      token = le_token();
+      if (AdditiveExpression(T_p, T_c))
+      {
+         if (RelationalExpressionRest(R1_hp, R1_sp, R1_hc, R1_sc))
+         {
+            return 1;
+         }
+      }
+      return 0;
+   }
+   if (token == TK_Menor)
+   {
+      token = le_token();
+      if (AdditiveExpression(T_p, T_c))
+      {
+         if (RelationalExpressionRest(R1_hp, R1_sp, R1_hc, R1_sc))
+         {
+            return 1;
+         }
+      }
+      return 0;
+   }
+   return 1;
+}
+
+// E -> E1 + T {E.cod=....}
+// E -> T { Rhp=Tp   Rhc=Tc}  R   {E.p=RSp   E.c=Rsc}
+
+
+int AdditiveExpression(char E_p[MAX_COD], char E_c[MAX_COD])
+{
+   char T_p[MAX_COD], T_c[MAX_COD], R_hp[MAX_COD], R_sp[MAX_COD], R_hc[MAX_COD], R_sc[MAX_COD];
+   if (MultiplicativeExpression(T_p, T_c))
+   {
+      if (AdditiveExpressionRest(R_hp, R_sp, R_hc, R_sc))
+      {
+         return 1;
+      }
+   }
+   return 0;
+}
+
+
+int AdditiveExpressionRest(char R_hp[MAX_COD], char R_sp[MAX_COD], char R_hc[MAX_COD], char R_sc[MAX_COD])
+{
+   char T_c[MAX_COD], R1_hc[MAX_COD], R1_sc[MAX_COD], T_p[MAX_COD], R1_hp[MAX_COD], R1_sp[MAX_COD];
+   if (token == TK_Mais)
+   {
+      token = le_token();
+      if (MultiplicativeExpression(T_p, T_c))
+      {
+         if (AdditiveExpressionRest(R1_hp, R1_sp, R1_hc, R1_sc))
+         {
+            return 1;
+         }
+      }
+      return 0;
+   }
+   if (token == TK_Menos)
+   {
+      token = le_token();
+      if (MultiplicativeExpression(T_p, T_c))
+      {
+         if (AdditiveExpressionRest(R1_hp, R1_sp, R1_hc, R1_sc))
+         {
+            return 1;
+         }
+      }
+      return 0;
+   }
+   return 1;
+}
+
+
+int MultiplicativeExpression(char T_p[MAX_COD], char T_c[MAX_COD])
+{
+   char F_c[MAX_COD], F_p[MAX_COD], S_hp[MAX_COD], S_sp[MAX_COD], S_hc[MAX_COD], S_sc[MAX_COD];
+   if (PrimaryExpression(F_p, F_c))
+   {
+      if (MultiplicativeExpressionRest(S_hp, S_sp, S_hc, S_sc))
+      {
+         return 1;
+      }
+   }
+   return 0;
+}
+
+
+int MultiplicativeExpressionRest(char S_hp[MAX_COD], char S_sp[MAX_COD], char S_hc[MAX_COD], char S_sc[MAX_COD])
+{
+   char F_c[MAX_COD], S1_hc[MAX_COD], S1_sc[MAX_COD], F_p[MAX_COD], S1_hp[MAX_COD], S1_sp[MAX_COD];
+   if (token == TK_Mult)
+   {
+      token = le_token();
+      if (PrimaryExpression(F_p, F_c))
+      {
+         if (MultiplicativeExpressionRest(S1_hp, S1_sp, S1_hc, S1_sc))
+         {
+            return 1;
+         }
+      }
+      return 0;
+   }
+
+   if (token == TK_Div)
+   {
+      token = le_token();
+      if (PrimaryExpression(F_p, F_c))
+      {
+         if (MultiplicativeExpressionRest(S1_hp, S1_sp, S1_hc, S1_sc))
+         {
+            return 1;
+         }
+      }
+      return 0;
+   }
+   return 1;
+}
+
+// F->id
+// F->cte
+int PrimaryExpression(char F_p[MAX_COD], char F_c[MAX_COD])
+{
+   if (token == TK_Const_Int)
+   {
+      token = le_token();
+      return 1;
+   }
+   if (token == TK_id)
+   {
+      token = le_token();
+      return 1;
+   }
+   return 0;
+}
+
+
+int IfExpression(char If_c[MAX_COD])
+{
+   if (token == TK_if)
+   {
+      token = le_token();
+     
+         char E_p[MAX_COD], E_cod[MAX_COD];
+         if (Expression(E_p, E_cod))
+         {
+               char E2_cod[MAX_COD];
+               if (Command(E2_cod))
+               {
+                  return 1;
+               }
+            
+         }
+      
+   }
+
+
+   return 0;
+}
+
+int Expression(char e_p[MAX_COD], char e_c[MAX_COD]){
+   char e1_c[MAX_COD];
+   if(AssignmentExpression(e_p, e_c)){
+      if(token == TK_virgula){
+         token = le_token();
+         if(Expression(e_p, e1_c)){
+            sprintf(e_c, "%s\n%s", e_c, e1_c);
+            return 1;
+         }
+
+         return 0;
+      }
+
+      return 1;
+   }
+
+   return 0;
+}
+
+
+int CommandList(char Com_c[MAX_COD]){
+   char Command_c[MAX_COD], CommandList_c[MAX_COD];
+   if(Command(Command_c)){
+      sprintf(Com_c, "%s", Command_c);
+      marca_pos();
+      if(CommandList(CommandList_c)){
+         sprintf(Com_c, "%s%s", Com_c, CommandList_c);
+         return 1;
+      }
+      restaura();
+      return 1;
+   }
+   
+   return 0;
+
+
+}
+
+int JumpExpression(char Com_c[MAX_COD]){
+   if(token == TK_goto){
+      token = le_token();
+      if(token == TK_id){
+         sprintf(Com_c, "\tgoto %s\n", lex);
+         token = le_token();
+         return 1;
+      }
+   }
+   return 0;
+}
+
+int JumpLabel(char Com_c[MAX_COD]){
+   if(token == TK_label){
+      token = le_token();
+      return 1;
+   }
+   return 0;
+}
+
+int Command(char Com_c[MAX_COD])
+{
+   if (token == TK_if)
+      return IfExpression(Com_c);
+   else if (token == TK_label)
+      return JumpLabel(Com_c);
+   else if (token == TK_goto)
+      return JumpExpression(Com_c);
+
+   char Com_p[MAX_COD];
+   return Expression(Com_p, Com_c);
+}
+
 
 int main()
 {
-arqin=fopen("c:\\teste\\prog.cpp","rb");
-if (!arqin) {
-printf("Erro na abertura do fonte.\n");
-return 0;
-}
-proxC(); // l� primeiro caracter do arquivo
-getToken(); // l� primeiro token
-while (tk!=TKFimArquivo)
-	{
-    printf("%d\n",tk);
-    getToken();
-	}
+   FILE *arqout;
+
+   if ((arqin = fopen("./input.txt", "rt")) == NULL)
+   {
+      printf("Erro na abertura do arquivo");
+      exit(0);
+   }
+   if ((arqout = fopen("./output.txt", "wt")) == NULL)
+   {
+      printf("Erro na abertura do arquivo de saida");
+      exit(0);
+   }
+   token = le_token();
+   char Com_c[MAX_COD];
+   if (CommandList(Com_c) == 0)
+      printf("Erro no comando!!!\n");
+   else
+   {
+      printf("%s\n", Com_c);
+      fprintf(arqout, "%s\n", Com_c);
+   }
+   fclose(arqin);
+   fclose(arqout);
 }
