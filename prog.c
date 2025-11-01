@@ -720,7 +720,6 @@ int CommandList(char Com_c[MAX_COD]){
 }
 
 int JumpLabel(char Com_c[MAX_COD]){
-   int proxBloco;
    char nomeBloco[20];
    strcpy(nomeBloco, lex);
    nomeBloco[strlen(lex) - 1] = '\0';
@@ -734,9 +733,8 @@ int JumpLabel(char Com_c[MAX_COD]){
 
       // Caso chegue em um trecho de código que sucede um GoTo incondicional,
       // O código a seguir será código morto a não ser que tenha uma label imediatamente após o GoTo
-      proxBloco = obterIndiceBloco(nomeBloco);
-      if(blocoAtual != -1) {
-         blocoAtual = proxBloco;
+      if(blocoAtual == -1) {
+         blocoAtual = obterIndiceBloco(nomeBloco);
       }
 
       token = le_token();
@@ -774,7 +772,6 @@ int CriarBlocos(char Com_c[MAX_COD]){
 
    // Do while para garantir que execute a primeira vez
    do {
-      // Reinicia flag para indicar se grafo mudou
       grafoMudou = 0;
       // Move ponteiro do arquivo de entrada para o inicio
       rewind(arqin);        // rewind limpa também feof/ferror
@@ -783,6 +780,10 @@ int CriarBlocos(char Com_c[MAX_COD]){
       c = le_char();
       ifCount = 0;
       blocoAtual = 0;
+
+      for(int i = 0; i < proxBloco; i++){
+         grafo[i].commands[0] = '\0';
+      }
 
       token = le_token();
       // Regra 1: Primeiro bloco começa na primeira instrução
@@ -841,6 +842,19 @@ int main()
       printf("Erro na abertura do arquivo");
       exit(0);
    }
+   
+
+   // token = le_token();
+   // // Regra 1: Primeiro bloco começa na primeira instrução
+   // char nomeBloco[20];
+   // if(token == TK_label){
+   //    strcpy(nomeBloco, lex);
+   //    nomeBloco[strlen(lex) - 1] = '\0';
+   //    strcpy(grafo[0].nome, nomeBloco);
+   // }
+   // else {
+   //    strcpy(grafo[0].nome, "Inicio");
+   // }
 
    char Com_c[MAX_COD] = "";
    if (CriarBlocos(Com_c) == 0)
