@@ -63,6 +63,7 @@ typedef struct bloco
 bb grafo[50];
 int blocoAtual = 0;
 int proxBloco = 1;
+int blocoSendoAvaliado = 0;
 
 char tokens[][20] = {"", "TK_int",
                      "TK_float",
@@ -195,6 +196,7 @@ int le_token()
 {
    static int pos = 0;
    static int estado = 0;
+   strcpy(lex, "");
    while (1)
    {
       switch (estado)
@@ -627,7 +629,7 @@ int JumpExpression(char Com_c[MAX_COD]){
    if(token == TK_goto){
       token = le_token();
       if(token == TK_id){
-         sprintf(Com_c, "%s %s\n", Com_c, lex);
+         sprintf(Com_c, "%s goto %s", Com_c, lex);
          // Adiciona o bloco sucessor por conta do desvio incondicional
          addSucc(lex);
          token = le_token();
@@ -657,7 +659,9 @@ int IfExpression(char If_c[MAX_COD])
                   // Adiciona o bloco sucessor por conta da execução sequencial (caso não atenda o if)
                   addSucc(blocoAbaixo);
                   strcpy(grafo[blocoAtual].commands, If_c);
+                  strcpy(If_c, "");
                   blocoAtual = i;
+                  blocoSendoAvaliado = blocoAtual;
                   return 1;
                }
             
@@ -708,6 +712,7 @@ int JumpLabel(char Com_c[MAX_COD]){
       // Adiciona o bloco sucessor por conta do Jump Label indicar o início de um novo bloco na execução sequencial
       if(blocoAtual != 0) addSucc(nomeBloco);
       blocoAtual = geraBloco(nomeBloco);
+
       token = le_token();
       return 1;
    }
@@ -718,8 +723,16 @@ int Command(char Com_c[MAX_COD])
 {
    if (token == TK_if)
       return IfExpression(Com_c);
-   else if (token == TK_label)
-      return JumpLabel(Com_c);
+   else if (token == TK_label) {
+      int i = JumpLabel(Com_c);
+      if (i && blocoAtual > 0) {
+         sprintf(grafo[blocoSendoAvaliado].commands, "%s\n", Com_c);
+         strcpy(Com_c, "");
+         blocoSendoAvaliado = blocoAtual;
+      }
+      
+      return i;
+   }
    else if (token == TK_goto)
       return JumpExpression(Com_c);
 
