@@ -1,2 +1,5 @@
-s	goto bb4
+ t0 = t0 + 1 
+ t0 = t0 - 1 
+ if a > 0 bb2
+ t1 = t0 + 1 
 

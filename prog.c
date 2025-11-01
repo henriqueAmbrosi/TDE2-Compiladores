@@ -56,6 +56,7 @@ typedef struct bloco
 {
    char nome[20];
    int succs[10];
+   char commands[2000];
    int proxSucc;
 } bb;
 
@@ -431,13 +432,16 @@ int CommandList(char Com_c[MAX_COD]);
 int Expression(char e_p[MAX_COD], char e_c[MAX_COD]);
 
 int AssignmentExpression(char A_p[MAX_COD], char A_c[MAX_COD]){
-   char A1_c[MAX_COD], A1_p[MAX_COD]; 
+   char A1_c[MAX_COD] = "", A1_p[MAX_COD] = ""; 
    marca_pos();
-   if(token == TK_id){
+   if(token == TK_id) {
+      sprintf(A1_c, "%s %s", A_c, lex);
       token = le_token();
-      if(token == TK_Atrib){
+      if(token == TK_Atrib) {
+         sprintf(A1_c, "%s %s", A1_c, lex);
          token = le_token();
-         if(AssignmentExpression(A1_p, A1_c)){
+         if(AssignmentExpression(A1_p, A1_c)) {
+            sprintf(A_c, "%s \n", A1_c);
             return 1;
          }
       }
@@ -454,10 +458,11 @@ int RelationalExpression(char E_p[MAX_COD], char E_c[MAX_COD])
 {
    char T_p[MAX_COD], T_c[MAX_COD], R_hp[MAX_COD], R_sp[MAX_COD], R_hc[MAX_COD], R_sc[MAX_COD];
 
-   if (AdditiveExpression(T_p, T_c))
+   if (AdditiveExpression(E_p, E_c))
    {
-      if (RelationalExpressionRest(R_hp, R_sp, R_hc, R_sc))
+      if (RelationalExpressionRest(E_p, R_sp, E_c, R_sc))
       {
+         strcpy(E_c, R_sc);
          return 1;
       }
    }
@@ -469,10 +474,11 @@ int RelationalExpressionRest(char R_hp[MAX_COD], char R_sp[MAX_COD], char R_hc[M
    char T_c[MAX_COD], R1_hc[MAX_COD], R1_sc[MAX_COD], T_p[MAX_COD], R1_hp[MAX_COD], R1_sp[MAX_COD];
    if (token == TK_Maior)
    {
+      sprintf(R_sc, "%s >", R_hc, lex);
       token = le_token();
-      if (AdditiveExpression(T_p, T_c))
+      if (AdditiveExpression(R_hp, R_sc))
       {
-         if (RelationalExpressionRest(R1_hp, R1_sp, R1_hc, R1_sc))
+         if (RelationalExpressionRest(R_hp, R_sp, R1_hc, R1_sc))
          {
             return 1;
          }
@@ -481,26 +487,31 @@ int RelationalExpressionRest(char R_hp[MAX_COD], char R_sp[MAX_COD], char R_hc[M
    }
    if (token == TK_Menor)
    {
+      sprintf(R_sc, "%s <", R_hc, lex);
       token = le_token();
-      if (AdditiveExpression(T_p, T_c))
+      if (AdditiveExpression(R_hp, R_sc))
       {
-         if (RelationalExpressionRest(R1_hp, R1_sp, R1_hc, R1_sc))
+         if (RelationalExpressionRest(R_hp, R_sp, R1_hc, R1_sc))
          {
             return 1;
          }
       }
       return 0;
    }
+
+   strcpy(R_sc, R_hc);
+   strcpy(R_sp, R_hp);
    return 1;
 }
 
 int AdditiveExpression(char E_p[MAX_COD], char E_c[MAX_COD])
 {
    char T_p[MAX_COD], T_c[MAX_COD], R_hp[MAX_COD], R_sp[MAX_COD], R_hc[MAX_COD], R_sc[MAX_COD];
-   if (MultiplicativeExpression(T_p, T_c))
+   if (MultiplicativeExpression(T_p, E_c))
    {
-      if (AdditiveExpressionRest(R_hp, R_sp, R_hc, R_sc))
+      if (AdditiveExpressionRest(E_p, R_sp, E_c, R_sc))
       {
+         strcpy(E_c, R_sc);
          return 1;
       }
    }
@@ -513,11 +524,13 @@ int AdditiveExpressionRest(char R_hp[MAX_COD], char R_sp[MAX_COD], char R_hc[MAX
    char T_c[MAX_COD], R1_hc[MAX_COD], R1_sc[MAX_COD], T_p[MAX_COD], R1_hp[MAX_COD], R1_sp[MAX_COD];
    if (token == TK_Mais)
    {
+      sprintf(R_sc, "%s +", R_hc);
       token = le_token();
-      if (MultiplicativeExpression(T_p, T_c))
+      if (MultiplicativeExpression(R_hp, R_sc))
       {
-         if (AdditiveExpressionRest(R1_hp, R1_sp, R1_hc, R1_sc))
+         if (AdditiveExpressionRest(R_hp, R1_sp, R_sc, R1_sc))
          {
+            strcpy(R_sc, R1_sc);
             return 1;
          }
       }
@@ -526,15 +539,20 @@ int AdditiveExpressionRest(char R_hp[MAX_COD], char R_sp[MAX_COD], char R_hc[MAX
    if (token == TK_Menos)
    {
       token = le_token();
-      if (MultiplicativeExpression(T_p, T_c))
+      sprintf(R_sc, "%s -", R_hc);
+      if (MultiplicativeExpression(R_hp, R_sc))
       {
-         if (AdditiveExpressionRest(R1_hp, R1_sp, R1_hc, R1_sc))
+         if (AdditiveExpressionRest(R_hp, R1_sp, R_sc, R1_sc))
          {
+            strcpy(R_sc, R1_sc);
             return 1;
          }
       }
       return 0;
    }
+
+   strcpy(R_sc, R_hc);
+   strcpy(R_sp, R_hp);
    return 1;
 }
 
@@ -542,9 +560,9 @@ int AdditiveExpressionRest(char R_hp[MAX_COD], char R_sp[MAX_COD], char R_hc[MAX
 int MultiplicativeExpression(char T_p[MAX_COD], char T_c[MAX_COD])
 {
    char F_c[MAX_COD], F_p[MAX_COD], S_hp[MAX_COD], S_sp[MAX_COD], S_hc[MAX_COD], S_sc[MAX_COD];
-   if (PrimaryExpression(F_p, F_c))
+   if (PrimaryExpression(T_p, T_c))
    {
-      if (MultiplicativeExpressionRest(S_hp, S_sp, S_hc, S_sc))
+      if (MultiplicativeExpressionRest(T_p, S_sp, T_c, S_sc))
       {
          return 1;
       }
@@ -558,6 +576,7 @@ int MultiplicativeExpressionRest(char S_hp[MAX_COD], char S_sp[MAX_COD], char S_
    char F_c[MAX_COD], S1_hc[MAX_COD], S1_sc[MAX_COD], F_p[MAX_COD], S1_hp[MAX_COD], S1_sp[MAX_COD];
    if (token == TK_Mult)
    {
+      sprintf(S_sc, "%s *", S_hc);
       token = le_token();
       if (PrimaryExpression(F_p, F_c))
       {
@@ -571,6 +590,7 @@ int MultiplicativeExpressionRest(char S_hp[MAX_COD], char S_sp[MAX_COD], char S_
 
    if (token == TK_Div)
    {
+      sprintf(S_sc, "%s /", S_hc);
       token = le_token();
       if (PrimaryExpression(F_p, F_c))
       {
@@ -590,11 +610,13 @@ int PrimaryExpression(char F_p[MAX_COD], char F_c[MAX_COD])
 {
    if (token == TK_Const_Int)
    {
+      sprintf(F_c, "%s %s", F_c, lex);
       token = le_token();
       return 1;
    }
    if (token == TK_id)
    {
+      sprintf(F_c, "%s %s", F_c, lex);
       token = le_token();
       return 1;
    }
@@ -605,6 +627,7 @@ int JumpExpression(char Com_c[MAX_COD]){
    if(token == TK_goto){
       token = le_token();
       if(token == TK_id){
+         sprintf(Com_c, "%s %s\n", Com_c, lex);
          // Adiciona o bloco sucessor por conta do desvio incondicional
          addSucc(lex);
          token = le_token();
@@ -614,25 +637,26 @@ int JumpExpression(char Com_c[MAX_COD]){
    return 0;
 }
 
-
 int IfExpression(char If_c[MAX_COD])
 {
    char blocoAbaixo[20];
    if (token == TK_if)
    {
+      sprintf(If_c, "%s %s", If_c, lex);
       token = le_token();
      
          char E_p[MAX_COD], E_cod[MAX_COD];
-         if (Expression(E_p, E_cod))
+         if (Expression(E_p, If_c))
          {
                char E2_cod[MAX_COD];
-               if (JumpExpression(E2_cod))
+               if (JumpExpression(If_c))
                {
                   // Regra 3: Gera novo bloco devido ao desvio condicional 
                   sprintf(blocoAbaixo, "Seq if %d", proxBloco + 1);
                   int i = geraBloco(blocoAbaixo);
                   // Adiciona o bloco sucessor por conta da execução sequencial (caso não atenda o if)
                   addSucc(blocoAbaixo);
+                  strcpy(grafo[blocoAtual].commands, If_c);
                   blocoAtual = i;
                   return 1;
                }
@@ -646,7 +670,6 @@ int IfExpression(char If_c[MAX_COD])
 }
 
 int Expression(char e_p[MAX_COD], char e_c[MAX_COD]){
-   char e1_c[MAX_COD];
    if(AssignmentExpression(e_p, e_c)){
       return 1;
    }
@@ -662,8 +685,8 @@ int CommandList(char Com_c[MAX_COD]){
       return 1;
    }
 
-   if(Command(Command_c)){
-      if(CommandList(CommandList_c)){
+   if(Command(Com_c)){
+      if(CommandList(Com_c)){
          return 1;
       }
    }
@@ -700,10 +723,21 @@ int Command(char Com_c[MAX_COD])
    else if (token == TK_goto)
       return JumpExpression(Com_c);
 
-   char Com_p[MAX_COD];
+   char Com_p[MAX_COD] = "";
    return Expression(Com_p, Com_c);
 }
 
+int printGrafo() {
+   for(int i = 0; i < proxBloco; i++){
+      printf("<<%s>>\n", grafo[i].nome);
+      printf("%s\n", grafo[i].commands);
+      for(int j = 0; j < grafo[i].proxSucc; j++){
+         printf("%s ", grafo[grafo[i].succs[j]].nome);
+      }
+      printf("\n\n");
+   }
+   return 1;
+}
 
 int main()
 {
@@ -732,12 +766,12 @@ int main()
       strcpy(grafo[0].nome, "Inicio");
    }
 
-   char Com_c[MAX_COD];
+   char Com_c[MAX_COD] = "";
    if (CommandList(Com_c) == 0)
       printf("Erro no comando!!!\n");
    else
    {
-      printf("%s\n", Com_c);
+      printGrafo();
       fprintf(arqout, "%s\n", Com_c);
    }
    fclose(arqin);
