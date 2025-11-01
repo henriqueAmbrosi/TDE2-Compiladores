@@ -731,6 +731,7 @@ int printGrafo() {
    for(int i = 0; i < proxBloco; i++){
       printf("<<%s>>\n", grafo[i].nome);
       printf("%s\n", grafo[i].commands);
+      printf("Sucessores: \n");
       for(int j = 0; j < grafo[i].proxSucc; j++){
          printf("%s ", grafo[grafo[i].succs[j]].nome);
       }
