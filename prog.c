@@ -45,7 +45,7 @@
 
 /***********************************************************************************/
 /*                                                                                 */
-/*  IN�CIO DO L�XICO - N�o entre a n�o ser que tenha interesse pessoal em l�xicos  */
+/*  INICIO DO LEXICO - Nao entre a nao ser que tenha interesse pessoal em lexicos  */
 /*                                                                                 */
 /***********************************************************************************/
 
@@ -60,6 +60,7 @@ typedef struct bloco
 } bb;
 
 bb grafo[50];
+int grafoMudou = 0;
 int blocoAtual = 0;
 int proxBloco = 1;
 
@@ -129,7 +130,7 @@ FILE *arqin;
 int token;
 char lex[20];
 char c;
-// vari�veis do marca - restaura
+// variaveis do marca - restaura
 
 
 int tokenant;
@@ -381,18 +382,34 @@ int geraBloco(char nomeBloco[20])
       }
    }
 
-
    grafo[proxBloco].proxSucc = 0;
    strcpy(grafo[proxBloco].nome, nomeBloco);
    proxBloco++;
+   grafoMudou = 1;
    return proxBloco - 1;
        
 }
 
-void addSucc(char nomeBloco[]){
+int obterIndiceBloco(char nomeBloco[20])
+{
    for(int i = 0; i < proxBloco; i++){
       if(strcmp(grafo[i].nome, nomeBloco) == 0){
-         // Verifica se successor ja existe
+         return i;
+      }
+   }
+
+   return -1;
+       
+}
+
+void addSucc(char nomeBloco[]){
+   if(blocoAtual == -1) return;
+
+   for(int i = 0; i < proxBloco; i++){
+      // Procura se sucessor já existe no grafo
+      if(strcmp(grafo[i].nome, nomeBloco) == 0){
+
+         // Verifica se successor ja foi adicionado no nodo atual
          for(int j = 0; j < grafo[blocoAtual].proxSucc; j++){
             if(grafo[blocoAtual].succs[j] == i){
                return;
@@ -400,13 +417,13 @@ void addSucc(char nomeBloco[]){
          }
          // Adiciona successor
          grafo[blocoAtual].succs[grafo[blocoAtual].proxSucc++] = i;
+         grafoMudou = 1;
          return;
       }
    }
-   int novoBloco;
-   novoBloco = geraBloco(nomeBloco);
-   grafo[blocoAtual].succs[grafo[blocoAtual].proxSucc++] = novoBloco;
-
+   
+   // Se não encontrar bloco sucessor, não adiciona o bloco 
+   // (em alguns casos, o bloco só vai ser adicionado quando encontrar um GoTo para essa label que pode ainda não ter aparecido)
    return;
 }
 
@@ -606,6 +623,7 @@ int JumpExpression(char Com_c[MAX_COD]){
       token = le_token();
       if(token == TK_id){
          // Adiciona o bloco sucessor por conta do desvio incondicional
+         geraBloco(lex);
          addSucc(lex);
          token = le_token();
          return 1;
@@ -682,9 +700,16 @@ int JumpLabel(char Com_c[MAX_COD]){
    // Nesse caso, ele gera quando encontra a label, mesmo que não tenha nenhum goto apontando pra ele
 
    if(token == TK_label){
-      // Adiciona o bloco sucessor por conta do Jump Label indicar o início de um novo bloco na execução sequencial
-      if(blocoAtual != 0) addSucc(nomeBloco);
-      blocoAtual = geraBloco(nomeBloco);
+       // Adiciona o bloco sucessor por conta do Jump Label indicar o início de um novo bloco na execução sequencial
+      if(blocoAtual > 0) addSucc(nomeBloco);
+
+      // Caso chegue em um trecho de código que sucede um GoTo incondicional,
+      // O código a seguir será código morto a não ser que tenha uma label imediatamente após o GoTo
+      if(blocoAtual == -1) {
+         blocoAtual = obterIndiceBloco(nomeBloco);
+      }
+
+     
       token = le_token();
       return 1;
    }
@@ -697,13 +722,31 @@ int Command(char Com_c[MAX_COD])
       return IfExpression(Com_c);
    else if (token == TK_label)
       return JumpLabel(Com_c);
-   else if (token == TK_goto)
-      return JumpExpression(Com_c);
-
+   else if (token == TK_goto) {
+      int result = JumpExpression(Com_c);
+      // Encontrou um GoTo Incondicional 
+      // (Não sabe qual o bloco atual)
+      blocoAtual = -1;
+      return result;
+   }
    char Com_p[MAX_COD];
    return Expression(Com_p, Com_c);
 }
 
+int CriarBlocos(char Com_c[MAX_COD]){
+   int results = 0;
+
+   // Do while para garantir que execute a primeira vez
+   do {
+      // Reinicia flag para indicar se grafo mudou
+      grafoMudou = 0;
+      // Move ponteiro do arquivo de entrada para o inicio
+      fseek(arqin, 0, SEEK_SET);
+      results = CommandList(Com_c);
+   } while(grafoMudou == 1);
+
+   return results;
+}
 
 int main()
 {
@@ -733,7 +776,7 @@ int main()
    }
 
    char Com_c[MAX_COD];
-   if (CommandList(Com_c) == 0)
+   if (CriarBlocos(Com_c) == 0)
       printf("Erro no comando!!!\n");
    else
    {
