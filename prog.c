@@ -674,7 +674,13 @@ int IfExpression(char If_c[MAX_COD])
                if (JumpExpression(If_c))
                {
                   // Regra 3: Gera novo bloco devido ao desvio condicional 
-                  sprintf(blocoAbaixo, "Seq_if_%d", ifCount++);
+                  if(token == TK_label){
+                     // Caso tenha sido declarada uma label abaixo do if usa ela para nomear o bloco
+                     strcpy(blocoAbaixo, lex);
+                     blocoAbaixo[strlen(lex) - 1] = '\0';
+                  } else {
+                     sprintf(blocoAbaixo, "Seq_if_%d", ifCount++);
+                  }
                   int i = geraBloco(blocoAbaixo);
                   // Adiciona o bloco sucessor por conta da execução sequencial (caso não atenda o if)
                   addSucc(blocoAbaixo);
@@ -710,6 +716,7 @@ int CommandList(char Com_c[MAX_COD]){
    }
 
    if(Command(Com_c)){
+      if(blocoAtual == -1) Com_c[0] = '\0';
       if(CommandList(Com_c)){
          return 1;
       }
@@ -721,6 +728,7 @@ int CommandList(char Com_c[MAX_COD]){
 }
 
 int JumpLabel(char Com_c[MAX_COD]){
+   int indiceBloco;
    char nomeBloco[20];
    strcpy(nomeBloco, lex);
    nomeBloco[strlen(lex) - 1] = '\0';
@@ -730,7 +738,11 @@ int JumpLabel(char Com_c[MAX_COD]){
 
    if(token == TK_label){
        // Adiciona o bloco sucessor por conta do Jump Label indicar o início de um novo bloco na execução sequencial
-      if(blocoAtual > 0) addSucc(nomeBloco);
+      if(blocoAtual > 0) {
+         indiceBloco = obterIndiceBloco(nomeBloco);
+         // Em desvios condicionais, a semântica do if se encarrega de adicionar o sucessor e mudar o bloco atual
+         if(blocoAtual != indiceBloco) addSucc(nomeBloco);
+      }
 
       // Caso chegue em um trecho de código que sucede um GoTo incondicional,
       // O código a seguir será código morto a não ser que tenha uma label imediatamente após o GoTo
@@ -843,19 +855,6 @@ int main()
       printf("Erro na abertura do arquivo");
       exit(0);
    }
-   
-
-   // token = le_token();
-   // // Regra 1: Primeiro bloco começa na primeira instrução
-   // char nomeBloco[20];
-   // if(token == TK_label){
-   //    strcpy(nomeBloco, lex);
-   //    nomeBloco[strlen(lex) - 1] = '\0';
-   //    strcpy(grafo[0].nome, nomeBloco);
-   // }
-   // else {
-   //    strcpy(grafo[0].nome, "Inicio");
-   // }
 
    char Com_c[MAX_COD] = "";
    if (CriarBlocos(Com_c) == 0)
