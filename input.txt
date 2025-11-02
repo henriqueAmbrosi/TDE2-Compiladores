@@ -1,7 +1,12 @@
-bb2:
-t0 = t0 + 1
-t0 = t0 - 1
-if a>0 goto bb2
+BB1:
+i = 0
+t_n = N
+goto BB2_TEST
 
-bb4:
-t1 = t0+1
+BB2_TEST:
+if i > t_n goto BB4_FIM
+t1 = i - 2
+goto BB1
+
+BB4_FIM:
+final = x + y

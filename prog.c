@@ -419,7 +419,8 @@ void addSucc(char nomeBloco[]){
             }
          }
          // Adiciona successor
-         grafo[blocoAtual].succs[grafo[blocoAtual].proxSucc++] = i;
+         grafo[blocoAtual].succs[grafo[blocoAtual].proxSucc] = i;
+         grafo[blocoAtual].proxSucc++;
          grafoMudou = 1;
          return;
       }
@@ -642,7 +643,7 @@ int PrimaryExpression(char F_p[MAX_COD], char F_c[MAX_COD])
    return 0;
 }
 
-int JumpExpression(char Com_c[MAX_COD]){
+int JumpExpression(char Com_c[MAX_COD]) {
    if(token == TK_goto){
       token = le_token();
       if(token == TK_id){
@@ -673,7 +674,7 @@ int IfExpression(char If_c[MAX_COD])
                if (JumpExpression(If_c))
                {
                   // Regra 3: Gera novo bloco devido ao desvio condicional 
-                  sprintf(blocoAbaixo, "Seq if %d", ifCount++);
+                  sprintf(blocoAbaixo, "Seq_if_%d", ifCount++);
                   int i = geraBloco(blocoAbaixo);
                   // Adiciona o bloco sucessor por conta da execução sequencial (caso não atenda o if)
                   addSucc(blocoAbaixo);
@@ -749,15 +750,12 @@ int Command(char Com_c[MAX_COD])
       return IfExpression(Com_c);
    else if (token == TK_label){
       int i = JumpLabel(Com_c);
-      if (i && blocoAtual > 0) {
-         sprintf(grafo[blocoSendoAvaliado].commands, "%s\n", Com_c);
-         strcpy(Com_c, "");
-         blocoSendoAvaliado = blocoAtual;
-      }
-      
       return i;
    } else if (token == TK_goto) {
+      int blocoAtualAntes = blocoAtual;
       int result = JumpExpression(Com_c);
+      strcpy(grafo[blocoAtualAntes].commands, Com_c);
+      strcpy(Com_c, "");
       // Encontrou um GoTo Incondicional 
       // (Não sabe qual o bloco atual)
       blocoAtual = -1;
@@ -798,6 +796,9 @@ int CriarBlocos(char Com_c[MAX_COD]){
       }
 
       results = CommandList(Com_c);
+      strcpy(grafo[blocoAtual].commands, Com_c);
+      strcpy(Com_c, "");
+   
    } while(grafoMudou == 1);
 
    return results;
