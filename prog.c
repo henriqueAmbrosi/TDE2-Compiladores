@@ -58,6 +58,7 @@ typedef struct bloco
    int succs[10];
    char commands[2000];
    int proxSucc;
+   int order;
 } bb;
 
 bb grafo[50];
@@ -65,6 +66,7 @@ int grafoMudou = 0;
 int blocoAtual = 0;
 int proxBloco = 1;
 int blocoSendoAvaliado = 0;
+int order = 0;
 
 char tokens[][20] = {"", "TK_int",
                      "TK_float",
@@ -518,6 +520,45 @@ int RelationalExpressionRest(char R_hp[MAX_COD], char R_sp[MAX_COD], char R_hc[M
       }
       return 0;
    }
+   if (token == TK_Menor_Igual)
+   {
+      sprintf(R_sc, "%s <=", R_hc, lex);
+      token = le_token();
+      if (AdditiveExpression(R_hp, R_sc))
+      {
+         if (RelationalExpressionRest(R_hp, R_sp, R1_hc, R1_sc))
+         {
+            return 1;
+         }
+      }
+      return 0;
+   }
+   if (token == TK_Maior_Igual)
+   {
+      sprintf(R_sc, "%s >=", R_hc, lex);
+      token = le_token();
+      if (AdditiveExpression(R_hp, R_sc))
+      {
+         if (RelationalExpressionRest(R_hp, R_sp, R1_hc, R1_sc))
+         {
+            return 1;
+         }
+      }
+      return 0;
+   }
+    if (token == TK_Igual)
+   {
+      sprintf(R_sc, "%s ==", R_hc, lex);
+      token = le_token();
+      if (AdditiveExpression(R_hp, R_sc))
+      {
+         if (RelationalExpressionRest(R_hp, R_sp, R1_hc, R1_sc))
+         {
+            return 1;
+         }
+      }
+      return 0;
+   }
 
    strcpy(R_sc, R_hc);
    strcpy(R_sp, R_hp);
@@ -687,6 +728,8 @@ int IfExpression(char If_c[MAX_COD])
                   strcpy(grafo[blocoAtual].commands, If_c);
                   strcpy(If_c, "");
                   blocoAtual = i;
+                  grafo[blocoAtual].order = order;
+                  order++;
                   blocoSendoAvaliado = blocoAtual;
                   return 1;
                }
@@ -748,6 +791,8 @@ int JumpLabel(char Com_c[MAX_COD]){
       // O código a seguir será código morto a não ser que tenha uma label imediatamente após o GoTo
       if(blocoAtual == -1) {
          blocoAtual = obterIndiceBloco(nomeBloco);
+         grafo[blocoAtual].order = order;
+         order++;
       }
 
       token = le_token();
@@ -790,6 +835,7 @@ int CriarBlocos(char Com_c[MAX_COD]){
       c = le_char();
       ifCount = 0;
       blocoAtual = 0;
+      order = 1;
 
       for(int i = 0; i < proxBloco; i++){
          grafo[i].commands[0] = '\0';
@@ -806,6 +852,7 @@ int CriarBlocos(char Com_c[MAX_COD]){
       else {
          strcpy(grafo[0].nome, "Inicio");
       }
+      grafo[0].order = 0;
 
       results = CommandList(Com_c);
       strcpy(grafo[blocoAtual].commands, Com_c);
@@ -825,7 +872,22 @@ int printGrafo() {
       exit(0);
    }
 
-   for(int i = 0; i < proxBloco; i++){
+   int indices[50];
+   for (int i = 0; i < proxBloco; i++) indices[i] = i;
+
+   for (int i = 0; i < proxBloco - 1; i++) {
+      for (int j = i + 1; j < proxBloco; j++) {
+         if (grafo[indices[i]].order > grafo[indices[j]].order) {
+            int temp = indices[i];
+            indices[i] = indices[j];
+            indices[j] = temp;
+         }
+      }
+   }
+   
+
+   for(int k = 0; k < proxBloco; k++){
+      int i = indices[k];
       printf("<<%s>>\n", grafo[i].nome);
       fprintf(arqout, "<<%s>>\n", grafo[i].nome);
       printf("%s\n", grafo[i].commands);

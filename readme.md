@@ -1,22 +1,5 @@
-Descrição do trabalho:
+Por: Henrique Molinari Ambrosi e Bruno Falcade Paese
 
-Faça um programa que identifique, a partir de um arquivo-fonte de código de 3 endereços, os blocos básicos e a estrutura do grafo listando, para cada bloco básico, os comandos que o compõem e seus blocos sucessores, como no exemplo abaixo (podem ocorrer pequenas variações no formato da saída sugerido aqui):
+Para rodar, use o comando ./prog. Ele utilizará um arquivo chamado input.txt como input e um arquivo output.txt como output além de mostrar o output no console.
 
-Bloco 2: succs { 4 3 }
-Bloco 3: succs { 4 6 }
-
-<bb 2>:
-if a>0 goto bb4
-<bb 3>:
-t0 = t0 +1
-goto bb4;
-
-<bb 4>
-
-t1 = t0+1
-
-A saída deve ser gerada em um arquivo.
-
-O programa deve reconhecer labels, comandos de desvio condicional e incondicional e comandos de atribuicao de 1 e dois operandos.
-
-Pode ser desenvolvido em duplas. 
+Caso precise compilar o programa novamente, use gcc prog.c -o prog.
